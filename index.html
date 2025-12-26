@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Grade 7 | ATOM Dashboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  </head>
+  <body>
+    <!-- Snow Canvas -->
+    <canvas id="snow-canvas"></canvas>
+
+    <div class="noise-overlay"></div>
+    <div id="cursor-dot"></div>
+
+    <!-- === LOGIN SCREEN === -->
+    <div id="login-screen">
+      <div class="login-card">
+        <div class="brand-icon">⚛</div>
+        <div class="login-text">
+          <h2>Identify Yourself</h2>
+          <p>Grade 7 Access Terminal</p>
+        </div>
+
+        <div class="input-group">
+          <div class="select-container">
+            <select id="student-select">
+              <option value="" disabled selected>Search name...</option>
+            </select>
+            <i class="ph ph-caret-down"></i>
+          </div>
+        </div>
+
+        <button class="primary-btn" onclick="handleLogin()">
+          <span>Access Dashboard</span>
+          <div class="btn-icon"><i class="ph ph-arrow-right"></i></div>
+        </button>
+      </div>
+      <p style="position: absolute; bottom: 50px; width: 100%; text-align: center; font-size: 20px; color: #555;">
+  this website was created by tahir
+</p>
+
+    </div>
+
+    <!-- === DASHBOARD === -->
+    <main class="dashboard-container" id="dashboard">
+      <header class="top-header">
+        <div class="greeting-box">
+          <h1 id="greeting-text">Welcome</h1>
+          <p id="full-date">Loading...</p>
+        </div>
+        <div class="header-controls">
+          <button class="snow-btn" onclick="toggleSnow()">
+            <i class="ph ph-snowflake"></i> Let it snow
+          </button>
+          <div class="live-clock">
+            <span id="clock">00:00</span>
+          </div>
+        </div>
+      </header>
+
+      <div class="bento-grid">
+        <!-- Card 1: Dynamic ID -->
+        <div class="card id-card" id="tilt-card" onclick="vibratePhone()">
+          <div class="card-bg-blur"></div>
+          <div class="card-content">
+            <div class="status-badge" id="id-badge">
+              <span class="dot"></span> Online
+            </div>
+            <div class="profile-flex">
+              <div class="avatar-big" id="id-avatar"></div>
+              <div class="id-details">
+                <h2 id="user-name">Guest</h2>
+                <p class="role" id="user-role">Student</p>
+                <div class="id-chip">
+                  <i class="ph ph-fingerprint"></i>
+                  <span id="id-number">ID-000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: Status -->
+        <div class="card status-card">
+          <div class="card-header">
+            <i class="ph ph-bell-ringing"></i>
+            <span>Status</span>
+          </div>
+          <div class="status-body">
+            <h3 id="status-title">Winter Break</h3>
+            <p id="status-subtitle">School Closed</p>
+          </div>
+          <div class="progress-bar">
+            <div class="fill" style="width: 100%"></div>
+          </div>
+        </div>
+
+        <!-- Card 3: Directory -->
+        <div
+          class="card nav-card"
+          onclick="openModal('map-modal'); vibratePhone()"
+        >
+          <div class="icon-box blue"><i class="ph ph-users-three"></i></div>
+          <div class="nav-text">
+            <h4>Classmates</h4>
+            <span>29 Students</span>
+          </div>
+          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+        </div>
+
+        <!-- Card 4: Schedule -->
+        <div
+          class="card nav-card"
+          onclick="openModal('timetable-modal'); vibratePhone()"
+        >
+          <div class="icon-box orange">
+            <i class="ph ph-calendar-check"></i>
+          </div>
+          <div class="nav-text">
+            <h4>Schedule</h4>
+            <span id="active-class-indicator">View Week</span>
+          </div>
+          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+        </div>
+
+        <!-- Card 5: Analytics -->
+        <div
+          class="card nav-card"
+          onclick="openModal('stats-modal'); vibratePhone()"
+        >
+          <div class="icon-box green">
+            <i class="ph ph-chart-pie-slice"></i>
+          </div>
+          <div class="nav-text">
+            <h4>Analytics</h4>
+            <span>Gender Ratio</span>
+          </div>
+          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+        </div>
+
+        <!-- Card 6: Memories -->
+        <div
+          class="card nav-card"
+          onclick="openModal('gallery-modal'); vibratePhone()"
+        >
+          <div class="icon-box pink"><i class="ph ph-images"></i></div>
+          <div class="nav-text">
+            <h4>Memories</h4>
+            <span>Gallery</span>
+          </div>
+          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+        </div>
+
+        <!-- Card 7: TEACHERS (Premium) -->
+        <div class="card teachers-card-premium" onclick="vibratePhone()">
+          <div class="t-header">
+            <i class="ph ph-chalkboard-teacher"></i>
+            <span>Homeroom Leadership</span>
+          </div>
+          <div class="t-grid">
+            <div class="t-profile">
+              <div
+                class="t-av-large"
+                style="background: #e0f2fe; color: #0369a1"
+              >
+                MA
+              </div>
+              <div>
+                <h4>Mr. Atay</h4>
+                <span>Teacher</span>
+              </div>
+            </div>
+            <div class="divider"></div>
+            <div class="t-profile">
+              <div
+                class="t-av-large"
+                style="background: #fce7f3; color: #be185d"
+              >
+                MS
+              </div>
+              <div>
+                <h4>Ms. Smitha</h4>
+                <span>Teacher</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 8: Location -->
+        <div
+          class="card nav-card"
+          onclick="openModal('school-modal'); vibratePhone()"
+        >
+          <div class="icon-box purple"><i class="ph ph-map-pin"></i></div>
+          <div class="nav-text">
+            <h4>Location</h4>
+            <span>Altymysheva 69</span>
+          </div>
+          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+        </div>
+      </div>
+    </main>
+
+    <!-- === MODALS === -->
+    <div id="modal-overlay"></div>
+
+    <!-- Directory Modal -->
+    <div class="modal" id="map-modal">
+      <div class="modal-header">
+        <h3>Directory <span class="badge">29</span></h3>
+        <button class="close-icon" onclick="closeModal('map-modal')">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-search">
+        <i class="ph ph-magnifying-glass"></i>
+        <input
+          type="text"
+          id="search-input"
+          placeholder="Search..."
+          onkeyup="filterStudents()"
+        />
+      </div>
+      <div class="student-grid" id="student-list"></div>
+    </div>
+
+    <!-- Timetable Modal -->
+    <div class="modal wide" id="timetable-modal">
+      <div class="modal-header">
+        <h3>Weekly Schedule</h3>
+        <button class="close-icon" onclick="closeModal('timetable-modal')">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-content-scroll">
+        <div class="timetable-grid">
+          <div class="th corner"></div>
+          <div class="th">1<br /><small>8:30</small></div>
+          <div class="th">2<br /><small>9:20</small></div>
+          <div class="th">3<br /><small>10:30</small></div>
+          <div class="th">4<br /><small>11:20</small></div>
+          <div class="th">5<br /><small>12:10</small></div>
+          <div class="th">6<br /><small>13:40</small></div>
+          <div class="th">7<br /><small>14:30</small></div>
+          <div class="th">8<br /><small>15:20</small></div>
+
+          <div class="td day-label">Mon</div>
+          <div class="td c-eng">ESL</div>
+          <div class="td c-geo">Geo</div>
+          <div class="td c-rus">Rus</div>
+          <div class="td c-math">Math</div>
+          <div class="td c-pe">PE</div>
+          <div class="td c-lang">Kg_Lang</div>
+          <div class="td c-lang">Kg_Lit</div>
+          <div class="td empty"></div>
+          <div class="td day-label">Tue</div>
+          <div class="td c-eng">ESL</div>
+          <div class="td c-sci">Sci</div>
+          <div class="td c-rus">Rus_Lit</div>
+          <div class="td c-glob">Glob</div>
+          <div class="td c-chn">CHN/FRE</div>
+          <div class="td c-ss">SS</div>
+          <div class="td c-math">Math</div>
+          <div class="td c-pe">PE</div>
+          <div class="td day-label">Wed</div>
+          <div class="td c-math">Math</div>
+          <div class="td c-glob">Glob</div>
+          <div class="td c-com">Com</div>
+          <div class="td c-sci">Sci</div>
+          <div class="td c-geo">Geo</div>
+          <div class="td c-rus">Rus_Lang</div>
+          <div class="td c-eng">ESL</div>
+          <div class="td c-char">Char</div>
+          <div class="td day-label">Thu</div>
+          <div class="td c-math">Math</div>
+          <div class="td c-sci">Sci</div>
+          <div class="td c-whis">WHIS</div>
+          <div class="td c-eng">ESL</div>
+          <div class="td c-eng">ESL</div>
+          <div class="td c-lang">Kg_H</div>
+          <div class="td c-chn">CHN</div>
+          <div class="td c-lang">Kg_Lang</div>
+          <div class="td day-label">Fri</div>
+          <div class="td c-art">Art</div>
+          <div class="td c-math">Math</div>
+          <div class="td c-eng">ESL</div>
+          <div class="td c-sci">Sci</div>
+          <div class="td c-whis">WHIS</div>
+          <div class="td c-com">Com</div>
+          <div class="td c-ss">SS</div>
+          <div class="td empty"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div class="modal" id="stats-modal">
+      <div class="modal-header">
+        <h3>Analytics</h3>
+        <button class="close-icon" onclick="closeModal('stats-modal')">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-body-center">
+        <div class="chart-container">
+          <canvas id="genderChart"></canvas>
+        </div>
+        <div class="stats-row">
+          <div class="stat-box blue">
+            <span class="num">13</span><span class="lbl">Boys</span>
+          </div>
+          <div class="stat-box purple">
+            <span class="num">14</span><span class="lbl">Girls</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4. Memories Modal (Updated) -->
+    <div class="modal wide" id="gallery-modal">
+        <!-- Fixed Header -->
+        <div class="modal-header">
+            <h3>Memories 📸</h3>
+            <button class="close-icon" onclick="closeModal('gallery-modal')"><i class="ph ph-x"></i></button>
+        </div>
+        
+        <!-- Scrollable Content Area -->
+        <div class="modal-content scrollable-y">
+            <div class="disclaimer-box">
+                <i class="ph ph-info"></i>
+                <p>Tap a photo/video to view fullscreen.</p>
+            </div>
+
+            <div class="memory-filters" id="memory-filters"></div>
+            <div class="gallery-grid" id="gallery-container"></div>
+        </div>
+    </div>
+
+      <div class="modal-content">
+        <div class="disclaimer-box">
+          <i class="ph ph-info"></i>
+          <p>New photos & videos will be updated by the Developer (Tahir).</p>
+        </div>
+
+        <!-- NEW: Filter Categories -->
+        <div class="memory-filters" id="memory-filters">
+          <!-- Buttons injected by JS -->
+        </div>
+
+        <!-- Gallery Grid -->
+        <div class="gallery-grid" id="gallery-container"></div>
+      </div>
+    </div>
+
+    <!-- Location Modal -->
+    <div class="modal" id="school-modal">
+      <div class="modal-header">
+        <h3>Location</h3>
+        <button class="close-icon" onclick="closeModal('school-modal')">
+          <i class="ph ph-x"></i>
+        </button>
+      </div>
+      <div class="modal-content">
+        <div class="address-box">
+          <i class="ph ph-map-pin-line"></i>
+          <div>
+            <strong>Altymysheva 69</strong>
+            <p>Bishkek</p>
+          </div>
+        </div>
+        <iframe
+          class="map-frame"
+          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2924.1867169467265!2d74.5682662766052!3d42.8689035027962!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x389ec83030f2d65f%3A0x6b26508349206e23!2sAltymysheva%20St%2069%2C%20Bishkek!5e0!3m2!1sen!2skg"
+          loading="lazy"
+        ></iframe>
+      </div>
+    </div>
+    <footer
+      style="
+        position: fixed;
+        bottom: 0;
+        width: 100%;
+        text-align: center;
+        font-size: 12px;
+        opacity: 0.6;
+        padding: 5px;
+        background: #fff;
+      "
+    >
+      this site was created by tahir
+    </footer>
+    <div id="lightbox" onclick="closeLightbox()">
+        <button class="lightbox-close"><i class="ph ph-x"></i></button>
+        <div class="lightbox-content" id="lightbox-media-container" onclick="event.stopPropagation()">
+            <!-- Media injected here -->
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
