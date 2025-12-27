@@ -1,411 +1,834 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Grade 7 | ATOM Dashboard</title>
-    <link rel="stylesheet" href="style.css" />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    
+    <!-- Fonts & Icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/@phosphor-icons/web"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  </head>
-  <body>
-    <!-- Snow Canvas -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <style>
+        :root {
+            /* Base Theme (Light Mode) */
+            --bg: #dce3ea; 
+            --surface: #ffffff;
+            --primary: #111111;
+            --secondary: #64748b;
+            
+            /* Accents */
+            --accent-blue: #0071e3;
+            --accent-gold: #F59E0B;
+            --accent-green: #10b981;
+            --accent-purple: #8b5cf6;
+            --accent-pink: #ec4899;
+            --accent-orange: #f97316;
+            
+            /* UI Config */
+            --radius: 24px;
+            --font: 'Inter', sans-serif;
+            --shadow-soft: 0 12px 32px rgba(0,0,0,0.06);
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+        body { 
+            background: var(--bg); 
+            font-family: var(--font); 
+            color: var(--primary); 
+            height: 100vh; 
+            overflow: hidden; 
+            display: flex; align-items: center; justify-content: center;
+            transition: background 0.5s ease, transform 1s ease;
+        }
+
+        /* === WINTER MODE (Night Theme) === */
+        body.winter-mode {
+            background: #0f172a; /* Dark Navy */
+            color: white;
+        }
+        body.winter-mode .greeting-box p,
+        body.winter-mode .nav-text span { color: #94a3b8; }
+        body.winter-mode .card {
+            background: rgba(255, 255, 255, 0.9);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        /* === MATRIX MODE (Easter Egg) === */
+        body.matrix-mode { background: black !important; font-family: 'JetBrains Mono', monospace; }
+        body.matrix-mode .card, body.matrix-mode .modal { background: #001100 !important; border: 1px solid #00ff00 !important; color: #00ff00 !important; box-shadow: 0 0 15px #00ff00 !important; }
+        body.matrix-mode h1, body.matrix-mode span, body.matrix-mode i { color: #00ff00 !important; text-shadow: 0 0 5px #00ff00; }
+        
+        /* === NEON MODE (Easter Egg) === */
+        body.neon-mode { background: #222 !important; }
+        body.neon-mode .card { background: #333 !important; color: #fff !important; border: 2px solid; animation: neonBorder 2s infinite alternate; }
+        @keyframes neonBorder { 0% { border-color: #ff0055; box-shadow: 0 0 10px #ff0055; } 100% { border-color: #00e5ff; box-shadow: 0 0 10px #00e5ff; } }
+
+        /* === CANVAS LAYERS === */
+        #snow-canvas, #matrix-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 8000;
+        }
+        #matrix-canvas { display: none; z-index: 8001; }
+
+        /* === CURSOR === */
+        #cursor-dot {
+            width: 18px; height: 18px; background: white; border-radius: 50%;
+            position: fixed; pointer-events: none; z-index: 9999;
+            transform: translate(-50%, -50%); mix-blend-mode: exclusion;
+            transition: transform 0.08s;
+        }
+        @media (hover: none) { #cursor-dot { display: none; } }
+
+        /* === NOISE TEXTURE === */
+        .noise-overlay {
+            position: fixed; inset: 0; pointer-events: none; opacity: 0.04; z-index: 9000;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        /* === LOGIN SCREEN === */
+        #login-screen {
+            position: fixed; inset: 0; background: var(--bg); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 0.6s ease;
+        }
+        .login-card {
+            background: white; padding: 40px 50px; border-radius: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.08); text-align: center;
+            width: 400px; max-width: 90%;
+            animation: slideUp 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .brand-icon {
+            font-size: 3rem; margin-bottom: 20px; display: inline-block;
+            background: var(--primary); color: white; width: 70px; height: 70px;
+            line-height: 70px; border-radius: 20px;
+        }
+        .select-container { position: relative; margin: 20px 0; }
+        select {
+            width: 100%; padding: 16px; border-radius: 14px;
+            border: 1px solid #e2e8f0; background: #f8fafc;
+            font-size: 1rem; appearance: none; outline: none; font-family: var(--font);
+        }
+        .select-container i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); pointer-events: none; }
+        .primary-btn {
+            width: 100%; padding: 16px; border-radius: 14px;
+            background: var(--primary); color: white; border: none;
+            font-weight: 600; font-size: 1rem; cursor: pointer;
+            display: flex; justify-content: center; gap: 10px; transition: 0.2s;
+        }
+        .primary-btn:active { transform: scale(0.98); }
+
+        /* === DASHBOARD === */
+        .dashboard-container {
+            width: 100%; max-width: 1200px; height: 95vh; padding: 0 24px;
+            display: flex; flex-direction: column; opacity: 0; pointer-events: none;
+            filter: blur(10px); transition: 0.8s;
+        }
+        .dashboard-container.active { opacity: 1; pointer-events: auto; filter: blur(0); }
+
+        /* Header */
+        .top-header { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+        .greeting-box h1 { font-size: 2.5rem; font-weight: 700; }
+        .header-controls { display: flex; align-items: center; gap: 20px; }
+        .live-clock { font-size: 2.5rem; font-weight: 300; cursor: pointer; user-select: none; }
+
+        .snow-btn {
+            background: white; border: 1px solid #e5e7eb;
+            padding: 8px 16px; border-radius: 20px; font-family: var(--font);
+            font-weight: 600; font-size: 0.9rem; color: #374151;
+            cursor: pointer; display: flex; align-items: center; gap: 6px;
+            transition: 0.2s; box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .snow-btn:hover { background: #f9fafb; transform: translateY(-1px); }
+        .snow-btn.active { background: #E0F2FE; color: #0284c7; border-color: #BAE6FD; }
+
+        /* Bento Grid */
+        .bento-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); grid-template-rows: repeat(2, minmax(0, 1fr));
+            gap: 20px; height: 100%; padding-bottom: 20px;
+        }
+        .card {
+            background: white; border-radius: 24px; padding: 24px;
+            position: relative; border: 1px solid rgba(255,255,255,0.5);
+            box-shadow: var(--shadow-soft); transition: 0.3s;
+            overflow: hidden; cursor: pointer;
+        }
+        .card:active { transform: scale(0.98); }
+
+        /* ID Card */
+        .id-card {
+            grid-column: span 2; background: #1c1c1e; color: white;
+            display: flex; align-items: center; transform-style: preserve-3d;
+        }
+        .card-bg-blur {
+            position: absolute; width: 100%; height: 100%; top: -50%; right: -50%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1), transparent 60%);
+            filter: blur(40px);
+        }
+        .profile-flex { display: flex; align-items: center; gap: 20px; position: relative; z-index: 2; }
+        .avatar-big {
+            width: 80px; height: 80px; border-radius: 24px; background: #333;
+            display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white;
+            background-size: cover; background-position: center;
+        }
+        .status-badge {
+            background: rgba(255,255,255,0.15); padding: 6px 12px; border-radius: 20px;
+            font-size: 0.75rem; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 5px;
+        }
+        .dot { width: 8px; height: 8px; background: #22c55e; border-radius: 50%; }
+        .id-chip {
+            background: rgba(0,0,0,0.3); padding: 6px 10px; border-radius: 8px;
+            font-size: 0.8rem; font-family: monospace; display: inline-flex; gap: 8px; margin-top: 5px;
+        }
+
+        /* ID Card Teacher Variant */
+        .id-card[data-role="teacher"] { background: linear-gradient(135deg, #0f172a, #1e293b); border: 1px solid #334155; }
+        .id-card[data-role="teacher"] .status-badge { background: rgba(251, 191, 36, 0.2); color: #fbbf24; }
+        .id-card[data-role="teacher"] .dot { background: #fbbf24; box-shadow: 0 0 10px #fbbf24; }
+        .id-card[data-role="teacher"] .role { color: #fbbf24; font-weight: 600; text-transform: uppercase; font-size: 0.75rem; }
+
+        /* Status Card */
+        .status-card { grid-column: span 2; display: flex; flex-direction: column; justify-content: space-between; }
+        .card-header { display: flex; align-items: center; gap: 8px; color: var(--secondary); font-size: 0.9rem; font-weight: 700; text-transform: uppercase; }
+        .status-body h3 { font-size: 2rem; letter-spacing: -1px; margin: 10px 0 5px; }
+        .progress-bar { height: 6px; background: #eee; border-radius: 3px; overflow: hidden; margin-top: auto; }
+        .fill { height: 100%; background: var(--primary); border-radius: 3px; }
+
+        /* Teachers Card Premium */
+        .teachers-card-premium {
+            grid-column: span 2; background: linear-gradient(145deg, #ffffff, #f8fafc);
+            display: flex; flex-direction: column; justify-content: center; padding: 24px !important;
+        }
+        .t-header { display: flex; align-items: center; gap: 8px; color: var(--secondary); font-size: 0.8rem; text-transform: uppercase; font-weight: 700; margin-bottom: 20px; }
+        .t-grid { display: flex; align-items: center; justify-content: space-between; }
+        .t-profile { display: flex; align-items: center; gap: 15px; }
+        .t-av-large {
+            width: 50px; height: 50px; border-radius: 16px;
+            display: grid; place-items: center; font-weight: 700; font-size: 1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .t-profile h4 { font-size: 1rem; font-weight: 600; margin-bottom: 2px; }
+        .t-profile span { font-size: 0.8rem; color: var(--secondary); display: block; }
+        .divider { width: 1px; height: 40px; background: #e2e8f0; margin: 0 15px; }
+
+        /* Nav Cards */
+        .nav-card { grid-column: span 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .icon-box {
+            width: 48px; height: 48px; border-radius: 14px;
+            display: grid; place-items: center; font-size: 1.5rem; color: white; margin-bottom: 10px;
+        }
+        .blue { background: var(--accent-blue); }
+        .orange { background: var(--accent-orange); }
+        .green { background: var(--accent-green); }
+        .purple { background: var(--accent-purple); }
+        .pink { background: var(--accent-pink); }
+        .nav-text h4 { font-size: 1.1rem; margin-bottom: 2px; }
+        .nav-text span { color: var(--secondary); font-size: 0.85rem; }
+        .arrow-btn {
+            align-self: flex-end; width: 32px; height: 32px; border-radius: 50%;
+            border: 1px solid #eee; background: white; display: grid; place-items: center;
+        }
+
+        /* === MODALS & SCROLLING FIX === */
+        #modal-overlay {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px);
+            opacity: 0; pointer-events: none; transition: 0.3s; z-index: 2000;
+        }
+        #modal-overlay.active { opacity: 1; pointer-events: auto; }
+
+        .modal {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -45%) scale(0.96);
+            width: 650px; max-width: 90%; max-height: 85vh;
+            background: white; border-radius: 24px;
+            opacity: 0; pointer-events: none; transition: 0.4s; z-index: 2001;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+        .modal.active { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        .modal.wide { width: 1000px; }
+
+        .modal-header {
+            padding: 20px 24px; border-bottom: 1px solid #eee; background: white;
+            display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;
+        }
+        .close-icon { background: none; border: none; font-size: 1.2rem; cursor: pointer; }
+
+        /* Content Scrolling Fix */
+        .modal-content.scrollable-y {
+            flex: 1; overflow-y: auto; padding: 24px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .modal-content { padding: 24px; }
+
+        /* Directory Styles */
+        .modal-search { padding: 15px 24px; border-bottom: 1px solid #eee; display: flex; gap: 10px; color: #888; }
+        .modal-search input { width: 100%; border: none; outline: none; font-size: 1rem; }
+        .student-grid { padding: 24px; overflow-y: auto; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
+        .s-card { padding: 15px; border: 1px solid #eee; border-radius: 16px; text-align: center; }
+        .s-avatar-small { width: 50px; height: 50px; border-radius: 14px; margin: 0 auto 10px; display: grid; place-items: center; font-weight: bold; background-size: cover; }
+        .tag-me { font-size: 0.7rem; background: var(--primary); color: white; padding: 2px 8px; border-radius: 4px; margin-top: 5px; display: inline-block; }
+
+        /* Timetable Styles */
+        .modal-content-scroll { padding: 0; overflow-x: auto; flex: 1; }
+        .timetable-grid { display: grid; grid-template-columns: 60px repeat(8, 120px); border-collapse: collapse; min-width: 900px; }
+        .th, .td { padding: 12px; border-bottom: 1px solid #eee; border-right: 1px solid #eee; text-align: center; font-size: 0.85rem; }
+        .active-class { box-shadow: inset 0 0 0 3px var(--accent-blue); position: relative; z-index: 2; }
+        .c-math { background: #fffbeb; color: #b45309; }
+        .c-sci { background: #f3e8ff; color: #7e22ce; }
+        .c-eng { background: #f1f5f9; color: #475569; }
+        /* ... (standard colors) */
+
+        /* === MEMORIES & GALLERY === */
+        .memory-filters {
+            display: flex; gap: 10px; margin-bottom: 20px; overflow-x: auto;
+            padding-bottom: 5px; scrollbar-width: none;
+        }
+        .filter-btn {
+            padding: 8px 16px; background: #f1f5f9; border: 1px solid #e2e8f0;
+            border-radius: 20px; font-size: 0.9rem; font-weight: 600; cursor: pointer; color: #64748b;
+        }
+        .filter-btn.active { background: var(--primary); color: white; }
+
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px;
+        }
+        .memory-card {
+            background: #e2e8f0; border-radius: 12px; aspect-ratio: 1/1;
+            position: relative; overflow: hidden; cursor: pointer;
+        }
+        .memory-img, .memory-card video { width: 100%; height: 100%; object-fit: cover; transition: 0.3s; }
+        .memory-card:hover .memory-img { transform: scale(1.05); }
+        .play-overlay {
+            position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.2); pointer-events: none;
+        }
+        .play-overlay i { font-size: 2rem; color: white; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        
+        /* Lightbox */
+        #lightbox { position: fixed; inset: 0; z-index: 10000; background: rgba(0,0,0,0.95); display: flex; justify-content: center; align-items: center; opacity: 0; pointer-events: none; transition: 0.3s; backdrop-filter: blur(5px); }
+        #lightbox.active { opacity: 1; pointer-events: auto; }
+        .lightbox-content { max-width: 95%; max-height: 90vh; display: flex; justify-content: center; align-items: center; }
+        .lightbox-content img, .lightbox-content video { max-width: 100%; max-height: 90vh; border-radius: 8px; box-shadow: 0 0 50px rgba(0,0,0,0.5); }
+        .lightbox-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.2); border: none; color: white; font-size: 2rem; width: 50px; height: 50px; border-radius: 50%; cursor: pointer; display: grid; place-items: center; z-index: 10001; }
+
+        /* Stats & Map */
+        .modal-body-center { display: flex; align-items: center; justify-content: space-around; padding: 40px; }
+        .chart-container { width: 220px; height: 220px; }
+        .stats-row { display: flex; gap: 20px; }
+        .stat-box { text-align: center; padding: 15px 30px; border-radius: 16px; min-width: 100px; }
+        .stat-box.blue { background: #eff6ff; color: #1d4ed8; }
+        .stat-box.purple { background: #faf5ff; color: #7e22ce; }
+        .num { display: block; font-size: 2rem; font-weight: 700; }
+        .address-box { display: flex; align-items: center; gap: 15px; margin-bottom: 20px; background: #f9f9f9; padding: 15px; border-radius: 12px; }
+        .map-frame { width: 100%; height: 350px; border: 0; border-radius: 16px; }
+
+        @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* === MOBILE ADJUSTMENTS (FIXED) === */
+        @media (max-width: 900px) {
+            .dashboard-container { padding: 0 15px; height: auto; padding-bottom: 50px; }
+            
+            /* Clean Stacked Header */
+            .top-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 15px;
+                margin-top: 15px;
+            }
+            .header-controls { width: 100%; justify-content: space-between; }
+            .snow-btn { padding: 8px 14px; font-size: 0.85rem; }
+            .live-clock { font-size: 2rem; }
+
+            /* Single Column Grid */
+            .bento-grid {
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .card { padding: 20px; }
+            
+            /* Nav Cards Grid (2 per row for icons) */
+            .nav-card-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+            }
+            
+            /* Bottom Sheet Modals */
+            .modal {
+                top: auto !important; left: 0 !important; bottom: 0 !important;
+                width: 100% !important; max-width: 100% !important; height: 85vh !important;
+                border-radius: 24px 24px 0 0 !important;
+                transform: translateY(100%) !important;
+                transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1) !important;
+            }
+            .modal.active { transform: translateY(0) !important; }
+            .modal-content.scrollable-y { padding-bottom: 50px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Canvas Layers -->
     <canvas id="snow-canvas"></canvas>
+    <canvas id="matrix-canvas"></canvas>
 
     <div class="noise-overlay"></div>
     <div id="cursor-dot"></div>
 
-    <!-- === LOGIN SCREEN === -->
+    <!-- === LOGIN === -->
     <div id="login-screen">
-      <div class="login-card">
-        <div class="brand-icon">⚛</div>
-        <div class="login-text">
-          <h2>Identify Yourself</h2>
-          <p>Grade 7 Access Terminal</p>
+        <div class="login-card">
+            <div class="brand-icon">⚛</div>
+            <div class="login-text">
+                <h2>Identify Yourself</h2>
+                <p>Grade 7 Access Terminal</p>
+            </div>
+            <div class="select-container">
+                <select id="student-select">
+                    <option value="" disabled selected>Search name...</option>
+                </select>
+                <i class="ph ph-caret-down"></i>
+            </div>
+            <button class="primary-btn" onclick="handleLogin()">
+                <span>Access Dashboard</span>
+                <div class="btn-icon"><i class="ph ph-arrow-right"></i></div>
+            </button>
         </div>
-
-        <div class="input-group">
-          <div class="select-container">
-            <select id="student-select">
-              <option value="" disabled selected>Search name...</option>
-            </select>
-            <i class="ph ph-caret-down"></i>
-          </div>
-        </div>
-
-        <button class="primary-btn" onclick="handleLogin()">
-          <span>Access Dashboard</span>
-          <div class="btn-icon"><i class="ph ph-arrow-right"></i></div>
-        </button>
-      </div>
-      <p style="position: absolute; bottom: 50px; width: 100%; text-align: center; font-size: 20px; color: #555;">
-  this website was created by tahir
-</p>
-
+        <p style="position: absolute; bottom: 30px; width: 100%; text-align: center; font-size: 12px; color: #888;">
+            Site by Tahir
+        </p>
     </div>
 
     <!-- === DASHBOARD === -->
     <main class="dashboard-container" id="dashboard">
-      <header class="top-header">
-        <div class="greeting-box">
-          <h1 id="greeting-text">Welcome</h1>
-          <p id="full-date">Loading...</p>
-        </div>
-        <div class="header-controls">
-          <button class="snow-btn" onclick="toggleSnow()">
-            <i class="ph ph-snowflake"></i> Let it snow
-          </button>
-          <div class="live-clock">
-            <span id="clock">00:00</span>
-          </div>
-        </div>
-      </header>
-
-      <div class="bento-grid">
-        <!-- Card 1: Dynamic ID -->
-        <div class="card id-card" id="tilt-card" onclick="vibratePhone()">
-          <div class="card-bg-blur"></div>
-          <div class="card-content">
-            <div class="status-badge" id="id-badge">
-              <span class="dot"></span> Online
+        
+        <header class="top-header">
+            <div class="greeting-box">
+                <h1 id="greeting-text">Welcome</h1>
+                <p id="full-date">Loading...</p>
             </div>
-            <div class="profile-flex">
-              <div class="avatar-big" id="id-avatar"></div>
-              <div class="id-details">
-                <h2 id="user-name">Guest</h2>
-                <p class="role" id="user-role">Student</p>
-                <div class="id-chip">
-                  <i class="ph ph-fingerprint"></i>
-                  <span id="id-number">ID-000</span>
+            <div class="header-controls">
+                <button class="snow-btn" onclick="toggleSnow()">
+                    <i class="ph ph-snowflake"></i> Snow
+                </button>
+                <div class="live-clock" id="clock-btn">
+                    <span id="clock">00:00</span>
                 </div>
-              </div>
             </div>
-          </div>
-        </div>
+        </header>
 
-        <!-- Card 2: Status -->
-        <div class="card status-card">
-          <div class="card-header">
-            <i class="ph ph-bell-ringing"></i>
-            <span>Status</span>
-          </div>
-          <div class="status-body">
-            <h3 id="status-title">Winter Break</h3>
-            <p id="status-subtitle">School Closed</p>
-          </div>
-          <div class="progress-bar">
-            <div class="fill" style="width: 100%"></div>
-          </div>
-        </div>
+        <div class="bento-grid">
 
-        <!-- Card 3: Directory -->
-        <div
-          class="card nav-card"
-          onclick="openModal('map-modal'); vibratePhone()"
-        >
-          <div class="icon-box blue"><i class="ph ph-users-three"></i></div>
-          <div class="nav-text">
-            <h4>Classmates</h4>
-            <span>29 Students</span>
-          </div>
-          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
-        </div>
-
-        <!-- Card 4: Schedule -->
-        <div
-          class="card nav-card"
-          onclick="openModal('timetable-modal'); vibratePhone()"
-        >
-          <div class="icon-box orange">
-            <i class="ph ph-calendar-check"></i>
-          </div>
-          <div class="nav-text">
-            <h4>Schedule</h4>
-            <span id="active-class-indicator">View Week</span>
-          </div>
-          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
-        </div>
-
-        <!-- Card 5: Analytics -->
-        <div
-          class="card nav-card"
-          onclick="openModal('stats-modal'); vibratePhone()"
-        >
-          <div class="icon-box green">
-            <i class="ph ph-chart-pie-slice"></i>
-          </div>
-          <div class="nav-text">
-            <h4>Analytics</h4>
-            <span>Gender Ratio</span>
-          </div>
-          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
-        </div>
-
-        <!-- Card 6: Memories -->
-        <div
-          class="card nav-card"
-          onclick="openModal('gallery-modal'); vibratePhone()"
-        >
-          <div class="icon-box pink"><i class="ph ph-images"></i></div>
-          <div class="nav-text">
-            <h4>Memories</h4>
-            <span>Gallery</span>
-          </div>
-          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
-        </div>
-
-        <!-- Card 7: TEACHERS (Premium) -->
-        <div class="card teachers-card-premium" onclick="vibratePhone()">
-          <div class="t-header">
-            <i class="ph ph-chalkboard-teacher"></i>
-            <span>Homeroom Leadership</span>
-          </div>
-          <div class="t-grid">
-            <div class="t-profile">
-              <div
-                class="t-av-large"
-                style="background: #e0f2fe; color: #0369a1"
-              >
-                MA
-              </div>
-              <div>
-                <h4>Mr. Atay</h4>
-                <span>Teacher</span>
-              </div>
+            <!-- 1. ID Card -->
+            <div class="card id-card" id="tilt-card" onclick="vibratePhone()">
+                <div class="card-bg-blur"></div>
+                <div class="card-content">
+                    <div class="status-badge" id="id-badge"><span class="dot"></span> Online</div>
+                    <div class="profile-flex">
+                        <div class="avatar-big" id="id-avatar"></div>
+                        <div class="id-details">
+                            <h2 id="user-name">Guest</h2>
+                            <p class="role" id="user-role">Student</p>
+                            <div class="id-chip">
+                                <i class="ph ph-fingerprint"></i>
+                                <span id="id-number">ID-000</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="divider"></div>
-            <div class="t-profile">
-              <div
-                class="t-av-large"
-                style="background: #fce7f3; color: #be185d"
-              >
-                MS
-              </div>
-              <div>
-                <h4>Ms. Smitha</h4>
-                <span>Teacher</span>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        <!-- Card 8: Location -->
-        <div
-          class="card nav-card"
-          onclick="openModal('school-modal'); vibratePhone()"
-        >
-          <div class="icon-box purple"><i class="ph ph-map-pin"></i></div>
-          <div class="nav-text">
-            <h4>Location</h4>
-            <span>Altymysheva 69</span>
-          </div>
-          <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+            <!-- 2. Status -->
+            <div class="card status-card">
+                <div class="card-header" id="status-icon-btn"><i class="ph ph-bell-ringing"></i><span>Status</span></div>
+                <div class="status-body"><h3 id="status-title">Winter Break</h3><p>School Closed</p></div>
+                <div class="progress-bar"><div class="fill" style="width: 100%"></div></div>
+            </div>
+
+            <!-- 3. Teachers -->
+            <div class="card teachers-card-premium" onclick="vibratePhone()">
+                <div class="t-header"><i class="ph ph-chalkboard-teacher"></i><span>Homeroom Leadership</span></div>
+                <div class="t-grid">
+                    <div class="t-profile"><div class="t-av-large" style="background:#E0F2FE; color:#0369A1">MA</div><div><h4>Mr. Atay</h4><span>Teacher</span></div></div>
+                    <div class="divider"></div>
+                    <div class="t-profile"><div class="t-av-large" style="background:#FCE7F3; color:#BE185D">MS</div><div><h4>Ms. Smitha</h4><span>Teacher</span></div></div>
+                </div>
+            </div>
+
+            <!-- 4. Nav Items (Wrapped for Mobile Grid) -->
+            <div class="nav-card-container" style="display: contents;"> 
+                <div class="card nav-card" onclick="openModal('map-modal'); vibratePhone()">
+                    <div class="icon-box blue"><i class="ph ph-users-three"></i></div>
+                    <div class="nav-text"><h4>Classmates</h4><span>29 Students</span></div>
+                    <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+                </div>
+
+                <div class="card nav-card" onclick="openModal('timetable-modal'); vibratePhone()">
+                    <div class="icon-box orange"><i class="ph ph-calendar-check"></i></div>
+                    <div class="nav-text"><h4>Schedule</h4><span id="active-class-indicator">View Week</span></div>
+                    <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+                </div>
+
+                <div class="card nav-card" onclick="openModal('stats-modal'); vibratePhone()">
+                    <div class="icon-box green"><i class="ph ph-chart-pie-slice"></i></div>
+                    <div class="nav-text"><h4>Analytics</h4><span>Gender Ratio</span></div>
+                    <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+                </div>
+
+                <div class="card nav-card" onclick="openModal('gallery-modal'); vibratePhone()">
+                    <div class="icon-box pink"><i class="ph ph-images"></i></div>
+                    <div class="nav-text"><h4>Memories</h4><span>Gallery</span></div>
+                    <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+                </div>
+
+                <div class="card nav-card" onclick="openModal('school-modal'); vibratePhone()">
+                    <div class="icon-box purple"><i class="ph ph-map-pin"></i></div>
+                    <div class="nav-text"><h4>Location</h4><span>Altymysheva</span></div>
+                    <button class="arrow-btn"><i class="ph ph-arrow-right"></i></button>
+                </div>
+            </div>
+
         </div>
-      </div>
     </main>
 
     <!-- === MODALS === -->
     <div id="modal-overlay"></div>
 
-    <!-- Directory Modal -->
+    <!-- Directory -->
     <div class="modal" id="map-modal">
-      <div class="modal-header">
-        <h3>Directory <span class="badge">29</span></h3>
-        <button class="close-icon" onclick="closeModal('map-modal')">
-          <i class="ph ph-x"></i>
-        </button>
-      </div>
-      <div class="modal-search">
-        <i class="ph ph-magnifying-glass"></i>
-        <input
-          type="text"
-          id="search-input"
-          placeholder="Search..."
-          onkeyup="filterStudents()"
-        />
-      </div>
-      <div class="student-grid" id="student-list"></div>
-    </div>
-
-    <!-- Timetable Modal -->
-    <div class="modal wide" id="timetable-modal">
-      <div class="modal-header">
-        <h3>Weekly Schedule</h3>
-        <button class="close-icon" onclick="closeModal('timetable-modal')">
-          <i class="ph ph-x"></i>
-        </button>
-      </div>
-      <div class="modal-content-scroll">
-        <div class="timetable-grid">
-          <div class="th corner"></div>
-          <div class="th">1<br /><small>8:30</small></div>
-          <div class="th">2<br /><small>9:20</small></div>
-          <div class="th">3<br /><small>10:30</small></div>
-          <div class="th">4<br /><small>11:20</small></div>
-          <div class="th">5<br /><small>12:10</small></div>
-          <div class="th">6<br /><small>13:40</small></div>
-          <div class="th">7<br /><small>14:30</small></div>
-          <div class="th">8<br /><small>15:20</small></div>
-
-          <div class="td day-label">Mon</div>
-          <div class="td c-eng">ESL</div>
-          <div class="td c-geo">Geo</div>
-          <div class="td c-rus">Rus</div>
-          <div class="td c-math">Math</div>
-          <div class="td c-pe">PE</div>
-          <div class="td c-lang">Kg_Lang</div>
-          <div class="td c-lang">Kg_Lit</div>
-          <div class="td empty"></div>
-          <div class="td day-label">Tue</div>
-          <div class="td c-eng">ESL</div>
-          <div class="td c-sci">Sci</div>
-          <div class="td c-rus">Rus_Lit</div>
-          <div class="td c-glob">Glob</div>
-          <div class="td c-chn">CHN/FRE</div>
-          <div class="td c-ss">SS</div>
-          <div class="td c-math">Math</div>
-          <div class="td c-pe">PE</div>
-          <div class="td day-label">Wed</div>
-          <div class="td c-math">Math</div>
-          <div class="td c-glob">Glob</div>
-          <div class="td c-com">Com</div>
-          <div class="td c-sci">Sci</div>
-          <div class="td c-geo">Geo</div>
-          <div class="td c-rus">Rus_Lang</div>
-          <div class="td c-eng">ESL</div>
-          <div class="td c-char">Char</div>
-          <div class="td day-label">Thu</div>
-          <div class="td c-math">Math</div>
-          <div class="td c-sci">Sci</div>
-          <div class="td c-whis">WHIS</div>
-          <div class="td c-eng">ESL</div>
-          <div class="td c-eng">ESL</div>
-          <div class="td c-lang">Kg_H</div>
-          <div class="td c-chn">CHN</div>
-          <div class="td c-lang">Kg_Lang</div>
-          <div class="td day-label">Fri</div>
-          <div class="td c-art">Art</div>
-          <div class="td c-math">Math</div>
-          <div class="td c-eng">ESL</div>
-          <div class="td c-sci">Sci</div>
-          <div class="td c-whis">WHIS</div>
-          <div class="td c-com">Com</div>
-          <div class="td c-ss">SS</div>
-          <div class="td empty"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Stats Modal -->
-    <div class="modal" id="stats-modal">
-      <div class="modal-header">
-        <h3>Analytics</h3>
-        <button class="close-icon" onclick="closeModal('stats-modal')">
-          <i class="ph ph-x"></i>
-        </button>
-      </div>
-      <div class="modal-body-center">
-        <div class="chart-container">
-          <canvas id="genderChart"></canvas>
-        </div>
-        <div class="stats-row">
-          <div class="stat-box blue">
-            <span class="num">13</span><span class="lbl">Boys</span>
-          </div>
-          <div class="stat-box purple">
-            <span class="num">14</span><span class="lbl">Girls</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 4. Memories Modal (Updated) -->
-    <div class="modal wide" id="gallery-modal">
-        <!-- Fixed Header -->
         <div class="modal-header">
-            <h3>Memories 📸</h3>
-            <button class="close-icon" onclick="closeModal('gallery-modal')"><i class="ph ph-x"></i></button>
+            <h3 class="header-logo">Directory <span class="badge">29</span></h3>
+            <button class="close-icon" onclick="closeModal('map-modal')"><i class="ph ph-x"></i></button>
         </div>
-        
-        <!-- Scrollable Content Area -->
-        <div class="modal-content scrollable-y">
-            <div class="disclaimer-box">
-                <i class="ph ph-info"></i>
-                <p>Tap a photo/video to view fullscreen.</p>
-            </div>
+        <div class="modal-search"><i class="ph ph-magnifying-glass"></i><input type="text" id="search-input" placeholder="Search..." onkeyup="filterStudents()"></div>
+        <div class="student-grid" id="student-list"></div>
+    </div>
 
+    <!-- Timetable -->
+    <div class="modal wide" id="timetable-modal">
+        <div class="modal-header"><h3>Weekly Schedule</h3><button class="close-icon" onclick="closeModal('timetable-modal')"><i class="ph ph-x"></i></button></div>
+        <div class="modal-content-scroll">
+            <div class="timetable-grid">
+                <div class="th corner"></div><div class="th">1<br><small>8:30</small></div><div class="th">2<br><small>9:20</small></div><div class="th">3<br><small>10:30</small></div><div class="th">4<br><small>11:20</small></div><div class="th">5<br><small>12:10</small></div><div class="th">6<br><small>13:40</small></div><div class="th">7<br><small>14:30</small></div><div class="th">8<br><small>15:20</small></div>
+                <div class="td day-label">Mon</div><div class="td c-eng">ESL</div><div class="td c-geo">Geo</div><div class="td c-rus">Rus</div><div class="td c-math">Math</div><div class="td c-pe">PE</div><div class="td c-lang">Kg_L</div><div class="td c-lang">Kg_L</div><div class="td empty"></div>
+                <div class="td day-label">Tue</div><div class="td c-eng">ESL</div><div class="td c-sci">Sci</div><div class="td c-rus">Rus</div><div class="td c-glob">Glob</div><div class="td c-chn">CHN</div><div class="td c-ss">SS</div><div class="td c-math">Math</div><div class="td c-pe">PE</div>
+                <div class="td day-label">Wed</div><div class="td c-math">Math</div><div class="td c-glob">Glob</div><div class="td c-com">Com</div><div class="td c-sci">Sci</div><div class="td c-geo">Geo</div><div class="td c-rus">Rus</div><div class="td c-eng">ESL</div><div class="td c-char">Char</div>
+                <div class="td day-label">Thu</div><div class="td c-math">Math</div><div class="td c-sci">Sci</div><div class="td c-whis">WHIS</div><div class="td c-eng">ESL</div><div class="td c-eng">ESL</div><div class="td c-lang">Kg_H</div><div class="td c-chn">CHN</div><div class="td c-lang">Kg_L</div>
+                <div class="td day-label">Fri</div><div class="td c-art">Art</div><div class="td c-math">Math</div><div class="td c-eng">ESL</div><div class="td c-sci">Sci</div><div class="td c-whis">WHIS</div><div class="td c-com">Com</div><div class="td c-ss">SS</div><div class="td empty"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="modal" id="stats-modal">
+        <div class="modal-header"><h3>Analytics</h3><button class="close-icon" onclick="closeModal('stats-modal')"><i class="ph ph-x"></i></button></div>
+        <div class="modal-body-center">
+            <div class="chart-container"><canvas id="genderChart"></canvas></div>
+            <div class="stats-row"><div class="stat-box blue"><span class="num">13</span><span class="lbl">Boys</span></div><div class="stat-box purple"><span class="num">16</span><span class="lbl">Girls</span></div></div>
+        </div>
+    </div>
+
+    <!-- Memories -->
+    <div class="modal wide" id="gallery-modal">
+        <div class="modal-header"><h3>Memories 📸</h3><button class="close-icon" onclick="closeModal('gallery-modal')"><i class="ph ph-x"></i></button></div>
+        <div class="modal-content scrollable-y">
             <div class="memory-filters" id="memory-filters"></div>
             <div class="gallery-grid" id="gallery-container"></div>
         </div>
     </div>
 
-      <div class="modal-content">
-        <div class="disclaimer-box">
-          <i class="ph ph-info"></i>
-          <p>New photos & videos will be updated by the Developer (Tahir).</p>
-        </div>
-
-        <!-- NEW: Filter Categories -->
-        <div class="memory-filters" id="memory-filters">
-          <!-- Buttons injected by JS -->
-        </div>
-
-        <!-- Gallery Grid -->
-        <div class="gallery-grid" id="gallery-container"></div>
-      </div>
-    </div>
-
-    <!-- Location Modal -->
+    <!-- Location -->
     <div class="modal" id="school-modal">
-      <div class="modal-header">
-        <h3>Location</h3>
-        <button class="close-icon" onclick="closeModal('school-modal')">
-          <i class="ph ph-x"></i>
-        </button>
-      </div>
-      <div class="modal-content">
-        <div class="address-box">
-          <i class="ph ph-map-pin-line"></i>
-          <div>
-            <strong>Altymysheva 69</strong>
-            <p>Bishkek</p>
-          </div>
+        <div class="modal-header"><h3>Location</h3><button class="close-icon" onclick="closeModal('school-modal')"><i class="ph ph-x"></i></button></div>
+        <div class="modal-content">
+            <div class="address-box"><i class="ph ph-map-pin-line"></i><div><strong>Altymysheva 69</strong><p>Bishkek</p></div></div>
+            <iframe class="map-frame" src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2924.1867169467265!2d74.5682662766052!3d42.8689035027962!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x389ec83030f2d65f%3A0x6b26508349206e23!2sAltymysheva%20St%2069%2C%20Bishkek!5e0!3m2!1sen!2skg" loading="lazy"></iframe>
         </div>
-        <iframe
-          class="map-frame"
-          src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2924.1867169467265!2d74.5682662766052!3d42.8689035027962!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x389ec83030f2d65f%3A0x6b26508349206e23!2sAltymysheva%20St%2069%2C%20Bishkek!5e0!3m2!1sen!2skg"
-          loading="lazy"
-        ></iframe>
-      </div>
     </div>
-    <footer
-      style="
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        text-align: center;
-        font-size: 12px;
-        opacity: 0.6;
-        padding: 5px;
-        background: #fff;
-      "
-    >
-      this site was created by tahir
-    </footer>
+
+    <!-- Lightbox -->
     <div id="lightbox" onclick="closeLightbox()">
         <button class="lightbox-close"><i class="ph ph-x"></i></button>
-        <div class="lightbox-content" id="lightbox-media-container" onclick="event.stopPropagation()">
-            <!-- Media injected here -->
-        </div>
+        <div class="lightbox-content" id="lightbox-media-container" onclick="event.stopPropagation()"></div>
     </div>
 
-    <script src="script.js"></script>
-  </body>
+    <script>
+        /* === DATA === */
+        const memoryData = {
+    "All": [], // Leave empty, code auto-fills this
+    "Trips": [
+        "trip.mp4",
+        "trip2.jpg",
+        "trip3.jpg",
+        "trip4.jpg",
+        "trip5.mp4",
+        "trip6.jpg",
+        "trip7.mp4",
+        "trip8.jpg",
+        "trip9.jpg",
+        "trip10.jpg",
+        "trip11.jpg",
+        "trip12.jpg"
+    ],
+    "Birthdays": [
+        "bday.jpg",
+        "bday2.jpg",
+        "bday3.jpg",
+        "bday4.mp4"
+    ],
+    "Sleepover": [
+        "sleepover1.jpg",
+        "sleepover2.jpg",
+        "sleepover3.jpg",
+        "sleepover4.jpg",
+        "sleepover5.jpg",
+        "sleepover6.jpg",
+        "sleepover7.jpg",
+        "sleepover8.jpg",
+        "sleepover9.jpg",
+    ],
+    
+};
+
+
+
+        const rawStudents = [
+            { name: "Mr. Atay", surname: "", gender: "boy", role: "teacher" },
+            { name: "Ms. Smitha", surname: "", gender: "girl", role: "teacher" },
+            { name: "Tahir", surname: "Ysmanaliev", gender: "boy" },
+            { name: "Aidar", surname: "Beyshenaliev", gender: "boy" },
+            { name: "Alinur", surname: "Alymbekov", gender: "boy" },
+            { name: "Iskhak", surname: "Esentaev", gender: "boy" },
+            { name: "Iskhak", surname: "Toktogulov", gender: "boy" },
+            { name: "Ali", surname: "Temirbekov", gender: "boy" },
+            { name: "Emin", surname: "Ayhan", gender: "boy" },
+            { name: "Nursultan", surname: "Talasbaev", gender: "boy" },
+            { name: "Omar", surname: "Satybaev", gender: "boy" },
+            { name: "Ariet", surname: "Nazarov", gender: "boy" },
+            { name: "Adil", surname: "Askarov", gender: "boy" },
+            { name: "Imran", surname: "Omurbekov", gender: "boy" },
+            { name: "Murat", surname: "Turgumbaev", gender: "boy" },
+            { name: "Aruuke", surname: "Sagynalieva", gender: "girl" },
+            { name: "Cholponai", surname: "Abdilakimova", gender: "girl" },
+            { name: "Adele", surname: "Sultanova", gender: "girl" },
+            { name: "Aisezim", surname: "Abdrahmanova", gender: "girl" },
+            { name: "Raniya", surname: "Djanybekova", gender: "girl" },
+            { name: "Daliya", surname: "Arstanbaeva", gender: "girl" },
+            { name: "Skyller", surname: "Samuels", gender: "girl" },
+            { name: "Muhlise", surname: "Acikgoz", gender: "girl" },
+            { name: "Kamila", surname: "Ashymova", gender: "girl" },
+            { name: "Alina", surname: "San", gender: "girl" },
+            { name: "Aruuke", surname: "Mirzaeva", gender: "girl" },
+            { name: "Nailia", surname: "Soshanlo", gender: "girl" },
+            { name: "Safiia", surname: "Kubanychbekova", gender: "girl" },
+            { name: "Amira", surname: "Magtymova", gender: "girl" },
+            { name: "Jamilya", surname: "Abazbekova", gender: "girl" }, 
+        ];
+
+        function stringToColor(str) { let hash=0; for(let i=0;i<str.length;i++)hash=str.charCodeAt(i)+((hash<<5)-hash); return `hsl(${Math.abs(hash)%360},70%,85%)`; }
+        function stringToDarkColor(str) { let hash=0; for(let i=0;i<str.length;i++)hash=str.charCodeAt(i)+((hash<<5)-hash); return `hsl(${Math.abs(hash)%360},70%,30%)`; }
+
+        const students = rawStudents.map(s => ({ ...s, fullName: s.surname ? `${s.name} ${s.surname}` : s.name, photoPath: `photos/${s.name}.jpg`, colorBg: stringToColor(s.name), colorTxt: stringToDarkColor(s.name), role: s.role||'student' })).sort((a,b)=>{ if(a.role==='teacher')return -1; if(b.role==='teacher')return 1; return a.fullName.localeCompare(b.fullName); });
+        let currentUser = null;
+
+        document.addEventListener("DOMContentLoaded",()=>{ initLogin(); startClock(); renderCharts(); loadMemories(); initMobileTilt(); initSnow(); initEasterEggs(); });
+
+        /* === EASTER EGGS === */
+        function initEasterEggs() {
+            // 1. Matrix Mode (Click Clock 5x)
+            let clockClicks = 0;
+            document.getElementById('clock-btn').addEventListener('click', () => {
+                clockClicks++;
+                if(clockClicks === 5) {
+                    document.body.classList.toggle('matrix-mode');
+                    clockClicks = 0;
+                    if(document.body.classList.contains('matrix-mode')) initMatrix();
+                    else stopMatrix();
+                }
+            });
+
+            // 2. Developer Reveal (Click Logo 10x)
+            let logoClicks = 0;
+            document.querySelector('.brand-icon').addEventListener('click', () => {
+                logoClicks++;
+                if(logoClicks === 10) {
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    alert("Developer: Tahir Ysmanaliev 💻");
+                    logoClicks = 0;
+                }
+            });
+
+            // 3. Neon Mode (Click Status 5x)
+            let statusClicks = 0;
+            document.getElementById('status-icon-btn').addEventListener('click', () => {
+                statusClicks++;
+                if(statusClicks === 5) {
+                    document.body.classList.toggle('neon-mode');
+                    statusClicks = 0;
+                }
+            });
+        }
+
+        // 4. Secret Search Codes
+        function checkSecretCodes(val) {
+            const v = val.toLowerCase();
+            if(v === 'party') { confetti({ particleCount: 200, spread: 180 }); document.getElementById('search-input').value = ""; }
+            if(v === 'do a barrel roll') { document.body.style.transition='2s'; document.body.style.transform='rotate(360deg)'; setTimeout(()=>{document.body.style.transform='none'},2000); document.getElementById('search-input').value = ""; }
+            if(v === 'gravity') {
+                document.body.style.overflow = 'hidden';
+                Array.from(document.body.children).forEach(child => {
+                    child.style.transition = "transform 1s ease-in";
+                    child.style.transform = `translateY(${window.innerHeight}px) rotate(${Math.random()*90}deg)`;
+                });
+                setTimeout(() => location.reload(), 3000);
+            }
+            if(v === 'flip') { document.body.style.transform = "rotate(180deg)"; }
+        }
+
+        /* === MATRIX EFFECT === */
+        let matrixInterval;
+        function initMatrix() {
+            const c = document.getElementById('matrix-canvas');
+            c.style.display = 'block';
+            const ctx = c.getContext('2d');
+            c.width = window.innerWidth; c.height = window.innerHeight;
+            const cols = Math.floor(c.width / 20);
+            const ypos = Array(cols).fill(0);
+            ctx.fillStyle = '#000'; ctx.fillRect(0,0,c.width,c.height);
+            function matrix() {
+                ctx.fillStyle = '#0001'; ctx.fillRect(0,0,c.width,c.height);
+                ctx.fillStyle = '#0f0'; ctx.font = '15pt monospace';
+                ypos.forEach((y, i) => {
+                    const text = String.fromCharCode(Math.random()*128);
+                    const x = i * 20;
+                    ctx.fillText(text, x, y);
+                    if(y > c.height && Math.random() > 0.975) ypos[i] = 0;
+                    else ypos[i] = y + 20;
+                });
+            }
+            matrixInterval = setInterval(matrix, 50);
+        }
+        function stopMatrix() {
+            clearInterval(matrixInterval);
+            document.getElementById('matrix-canvas').style.display = 'none';
+        }
+
+        /* === SNOW === */
+        let snowActive = false, snowCanvas, snowCtx, particles = [], w, h, windSpeed = 0, animId;
+        function initSnow() { snowCanvas = document.getElementById('snow-canvas'); if(!snowCanvas) return; snowCtx = snowCanvas.getContext('2d'); resizeSnow(); window.addEventListener('resize', resizeSnow); }
+        function resizeSnow() { w = snowCanvas.width = window.innerWidth; h = snowCanvas.height = window.innerHeight; }
+        function createParticles() { particles = []; for(let i=0; i<150; i++) particles.push({x: Math.random() * w, y: Math.random() * h, r: Math.random() * 3 + 1, d: Math.random() * 10 + 2}); }
+        function drawSnow() {
+            if(!snowActive) { snowCtx.clearRect(0,0,w,h); cancelAnimationFrame(animId); return; }
+            snowCtx.clearRect(0,0,w,h); snowCtx.fillStyle = "#FFFFFF"; snowCtx.beginPath();
+            for(let i=0; i<particles.length; i++) { let p = particles[i]; snowCtx.moveTo(p.x, p.y); snowCtx.arc(p.x, p.y, p.r, 0, Math.PI*2, true); }
+            snowCtx.fill(); updateSnow(); animId = requestAnimationFrame(drawSnow);
+        }
+        function updateSnow() {
+            for(let i=0; i<particles.length; i++) {
+                let p = particles[i]; p.y += Math.cos(p.d) + 1 + p.r/2; p.x += Math.sin(0) + 0.5 + windSpeed;
+                if(p.x > w+5 || p.x < -5 || p.y > h) { particles[i] = {x: Math.random()*w, y: -10, r: p.r, d: p.d}; }
+            }
+        }
+        window.toggleSnow = function() {
+            snowActive = !snowActive; const btn = document.querySelector('.snow-btn'); const body = document.body;
+            if(snowActive) { btn.classList.add('active'); body.classList.add('winter-mode'); btn.innerHTML = '<i class="ph ph-snowflake"></i> Stop Snow'; resizeSnow(); createParticles(); drawSnow(); }
+            else { btn.classList.remove('active'); body.classList.remove('winter-mode'); btn.innerHTML = '<i class="ph ph-snowflake"></i> Let it snow'; snowCtx.clearRect(0,0,w,h); }
+        }
+
+        /* === LOGIN & LOGIC === */
+        function initLogin() { const select = document.getElementById('student-select'); students.forEach(s => { const option = document.createElement('option'); option.value = s.fullName; option.innerText = s.role === 'teacher' ? `👑 ${s.fullName}` : s.fullName; select.appendChild(option); }); }
+        window.handleLogin = function() {
+            vibratePhone(); const val = document.getElementById('student-select').value;
+            if(!val) return alert("Select your name.");
+            currentUser = students.find(s => s.fullName === val);
+            document.getElementById('user-name').innerText = currentUser.fullName;
+            const idCard = document.getElementById('tilt-card');
+            if (currentUser.role === 'teacher') { document.getElementById('user-role').innerText = "Homeroom Teacher"; document.getElementById('id-number').innerText = "STAFF-001"; idCard.setAttribute('data-role', 'teacher'); }
+            else { document.getElementById('user-role').innerText = "Grade 7 Student"; document.getElementById('id-number').innerText = `ID-2025-${(students.indexOf(currentUser)+1).toString().padStart(2,'0')}`; idCard.removeAttribute('data-role'); }
+            const av = document.getElementById('id-avatar'); const img = new Image(); img.src = currentUser.photoPath;
+            img.onload = () => { av.style.backgroundImage = `url('${currentUser.photoPath}')`; av.innerText = ""; };
+            img.onerror = () => { av.style.background = currentUser.colorBg; av.style.color = currentUser.colorTxt; av.innerText = currentUser.name.charAt(0); };
+            document.getElementById('login-screen').style.opacity = '0';
+            setTimeout(() => { document.getElementById('login-screen').style.display = 'none'; document.getElementById('dashboard').classList.add('active'); renderStudentList(); }, 500);
+        }
+
+        /* === MEMORIES === */
+        function loadMemories() {
+            const filterContainer = document.getElementById('memory-filters'); if(!filterContainer) return; filterContainer.innerHTML = "";
+            const allFiles = new Set(); Object.keys(memoryData).forEach(cat => { if(cat !== "All") memoryData[cat].forEach(file => allFiles.add(file)); });
+            memoryData["All"] = Array.from(allFiles);
+            Object.keys(memoryData).forEach(cat => {
+                if(memoryData[cat].length === 0) return;
+                const btn = document.createElement('button'); btn.className = `filter-btn ${cat === "All" ? "active" : ""}`; btn.innerText = cat;
+                btn.onclick = () => { document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); renderGallery(cat); };
+                filterContainer.appendChild(btn);
+            });
+            renderGallery("All");
+        }
+        function renderGallery(category) {
+            const container = document.getElementById('gallery-container'); container.innerHTML = "";
+            const files = memoryData[category] || [];
+            if(files.length === 0) { container.innerHTML = `<div style="grid-column:1/-1; text-align:center; color:#888;">No memories found.</div>`; return; }
+            files.forEach(filename => {
+                const div = document.createElement('div'); div.className = "memory-card"; const path = `memories/${filename}`;
+                const isVideo = filename.toLowerCase().endsWith('.mp4') || filename.toLowerCase().endsWith('.mov') || filename.toLowerCase().endsWith('.webm');
+                if (isVideo) {
+                    div.innerHTML = `<video src="${path}#t=0.1" preload="metadata" playsinline></video><div class="play-overlay"><i class="ph ph-play-circle"></i></div>`;
+                    div.onclick = () => openLightbox(path, 'video');
+                } else {
+                    const img = document.createElement('img'); img.className = "memory-img"; img.src = path; img.loading = "lazy";
+                    img.onerror = () => { div.style.display="none"; }; div.appendChild(img); div.onclick = () => openLightbox(path, 'image');
+                }
+                container.appendChild(div);
+            });
+        }
+        function openLightbox(src, type) {
+            const lightbox = document.getElementById('lightbox'); const container = document.getElementById('lightbox-media-container'); container.innerHTML = "";
+            if (type === 'video') { container.innerHTML = `<video controls autoplay playsinline style="max-width:100%; max-height:90vh; border-radius:8px;"><source src="${src}" type="video/mp4"></video>`; }
+            else { const img = document.createElement('img'); img.src = src; container.appendChild(img); }
+            lightbox.classList.add('active');
+        }
+        window.closeLightbox = function() { document.getElementById('lightbox').classList.remove('active'); setTimeout(() => { document.getElementById('lightbox-media-container').innerHTML = ""; }, 300); }
+
+        /* === UTILS === */
+        window.openModal = (id) => { document.getElementById('modal-overlay').classList.add('active'); document.getElementById(id).classList.add('active'); }
+        window.closeModal = (id) => { document.getElementById('modal-overlay').classList.remove('active'); document.getElementById(id).classList.remove('active'); }
+        window.vibratePhone = function() { if (navigator.vibrate) navigator.vibrate(10); }
+        function renderStudentList(filter = "") {
+            const grid = document.getElementById('student-list'); grid.innerHTML = "";
+            checkSecretCodes(filter); // Check for easter eggs
+            students.forEach(s => {
+                if(!s.fullName.toLowerCase().includes(filter.toLowerCase())) return;
+                const isMe = currentUser && s.fullName === currentUser.fullName;
+                const card = document.createElement('div'); card.className = "s-card";
+                let tagHtml = ""; if (s.role === 'teacher') tagHtml = '<div class="tag-me" style="background:#F59E0B">TEACHER</div>'; else if (isMe) tagHtml = '<div class="tag-me">YOU</div>';
+                card.innerHTML = `<div class="s-avatar-small" style="background:${s.colorBg}; color:${s.colorTxt}">${s.name.charAt(0)}</div><div class="s-info"><h5>${s.fullName}</h5>${tagHtml}</div>`;
+                const img = new Image(); img.src = s.photoPath; img.onload = () => { card.querySelector('.s-avatar-small').innerHTML = ''; card.querySelector('.s-avatar-small').style.backgroundImage = `url('${s.photoPath}')`; };
+                grid.appendChild(card);
+            });
+        }
+        window.filterStudents = () => renderStudentList(document.getElementById('search-input').value);
+        function startClock() { setInterval(() => { document.getElementById('clock').innerText = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}); }, 1000); document.getElementById('full-date').innerText = new Date().toLocaleDateString('en-US', {weekday:'long', month:'long', day:'numeric'}); }
+        function updateGreeting() { const h = new Date().getHours(); document.getElementById('greeting-text').innerText = h < 12 ? "Good Morning" : h < 17 ? "Good Afternoon" : "Good Evening"; }
+        function renderCharts() { new Chart(document.getElementById('genderChart'), { type: 'doughnut', data: { labels: ['Boys','Girls'], datasets: [{ data: [13,16], backgroundColor: ['#0071e3','#8b5cf6'], borderWidth:0 }] }, options: { cutout: '75%', plugins: { legend: { display:false } } } }); }
+        
+        function initMobileTilt() {
+            const card = document.getElementById('tilt-card');
+            if (window.DeviceOrientationEvent) { window.addEventListener('deviceorientation', function(event) {
+                const x = Math.min(Math.max(event.gamma, -20), 20); const y = Math.min(Math.max(event.beta - 45, -20), 20);
+                if(x && y) card.style.transform = `perspective(1000px) rotateY(${x}deg) rotateX(${-y}deg)`;
+                if(snowActive) windSpeed = event.gamma / 10;
+            }); }
+        }
+        const tiltCard = document.getElementById('tilt-card');
+        tiltCard.addEventListener('mousemove', e => { if(window.innerWidth < 900) return; const rect = tiltCard.getBoundingClientRect(); const x = e.clientX - rect.left - rect.width/2; const y = e.clientY - rect.top - rect.height/2; tiltCard.style.transform = `perspective(1000px) rotateY(${x/20}deg) rotateX(${-y/20}deg)`; });
+        tiltCard.addEventListener('mouseleave', () => tiltCard.style.transform = 'none');
+        const cursor = document.getElementById('cursor-dot'); let mx=0,my=0,cx=0,cy=0; document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY}); function animCursor(){ cx+=(mx-cx)*0.2; cy+=(my-cy)*0.2; cursor.style.left=cx+'px'; cursor.style.top=cy+'px'; requestAnimationFrame(animCursor); } animCursor();
+    </script>
+</body>
 </html>
